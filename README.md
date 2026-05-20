@@ -1,23 +1,77 @@
-# Ex Oblivione
+# monitoring.sh
 
-When the last days were upon me, and the ugly trifles of existence began to drive me to madness like the small drops of water that torturers let fall ceaselessly upon one spot of their victims body, I loved the irradiate refuge of sleep. In my dreams I found a little of the beauty I had vainly sought in life, and wandered through old gardens and enchanted woods.
+A system monitoring script written as part of the **Born2beRoot** project at [42 School](https://42.fr). It collects key system metrics and broadcasts them to all connected terminals using `wall`.
 
-Once when the wind was soft and scented I heard the south calling, and sailed endlessly and languorously under strange stars.
+> **No AI was used during the production of this script or any associated research. AI was used solely for the redaction of this README.**
 
-Once when the gentle rain fell I glided in a barge down a sunless stream under the earth till I reached another world of purple twilight, iridescent arbours, and undying roses.
+---
 
-And once I walked through a golden valley that led to shadowy groves and ruins, and ended in a mighty wall green with antique vines, and pierced by a little gate of bronze.
+## What it does
 
-Many times I walked through that valley, and longer and longer would I pause in the spectral half-light where the giant trees squirmed and twisted grotesquely, and the grey ground stretched damply from trunk to trunk, some times disclosing the mould-stained stones of buried temples. And alway the goal of my fancies was the mighty vine-grown wall with the little gate of bronze therein.
+Every time the script runs, it gathers a snapshot of the machine's current state and broadcasts it system-wide. It is meant to be executed automatically every 10 minutes via a `cron` job, so any logged-in user always has a recent overview of the server's health.
 
-After a while, as the days of waking became less and less bearable from their greyness and sameness, I would often drift in opiate peace through the valley and the shadowy groves, and wonder how I might seize them for my eternal dwelling-place, so that I need no more crawl back to a dull world stript of interest and new colours. And as I looked upon the little gate in the mighty wall, I felt that beyond it lay a dream-country from which, once it was entered, there would be no return.
+The broadcast message contains the following information:
 
-So each night in sleep I strove to find the hidden latch of the gate in the ivied antique wall, though it was exceedingly well hidden. And I would tell myself that the realm beyond the wall was not more lasting merely, but more lovely and radiant as well.
+| Field | Source | Description |
+|---|---|---|
+| **System Architecture** | `uname -a` | Kernel version, hostname, hardware platform, and OS |
+| **CPU physical cores** | `/proc/cpuinfo` (`cpu cores`) | Number of physical processor cores |
+| **CPU virtual cores** | `/proc/cpuinfo` (`siblings`) | Number of logical threads (includes hyperthreading) |
+| **RAM Usage** | `free --mega` | Used / total RAM in MB with percentage |
+| **Disk Usage** | `df -h --total` | Used / total disk space with percentage |
+| **CPU Usage** | `top -bn1` | Combined user + system CPU load percentage |
+| **Last Reboot** | `who -b` | Date and time of the last system boot |
+| **LVM** | `lsblk` | Whether any LVM volumes are present (Active / Inactive) |
+| **TCP** | `/proc/net/sockstat` | Number of currently established TCP connections |
+| **Users logged** | `who` | Number of users currently logged into the system |
+| **Network** | `hostname -I` / `ip link` | Primary IPv4 address and MAC address of the machine |
+| **Sudo calls** | `/var/log/auth.log` | Total number of commands run with `sudo` since log rotation |
 
-Then one night in the dream-city of Zakarion I found a yellowed papyrus filled with the thoughts of dream-sages who dwelt of old in that city, and who were too wise ever to be born in the waking world. Therein were written many things concerning the world of dream, and among them was lore of a golden valley and a sacred grove with temples, and a high wall pierced by a little bronze gate. When I saw this lore, I knew that it touched on the scenes I had haunted, and I therefore read long in the yellowed papyrus.
+---
 
-Some of the dream-sages wrote gorgeously of the wonders beyond the irrepassable gate, but others told of horror and disappointment. I knew not which to believe, yet longed more and more to cross for ever into the unknown land; for doubt and secrecy are the lure of lures, and no new horror can be more terrible than the daily torture of the commonplace. So when I learned of the drug which would unlock the gate and drive me through, I resolved to take it when next I awaked.
+## Requirements
 
-Last night I swallowed the drug and floated dreamily into the golden valley and the shadowy groves; and when I came this time to the antique wall, I saw that the small gate of bronze was ajar. From beyond came a glow that weirdly lit the giant twisted trees and the tops of the buried temples, and I drifted on songfully, expectant of the glories of the land from whence I should never return.
+- A Debian-based Linux system (the script reads Debian-specific paths such as `/var/log/auth.log` and `/proc/net/sockstat`)
+- Standard GNU/Linux utilities: `uname`, `grep`, `awk`, `free`, `df`, `top`, `who`, `lsblk`, `ip`, `hostname`, `wall`
+- Root or sudo privileges are not required to run the script itself, but reading `/var/log/auth.log` may require appropriate permissions depending on system configuration
 
-But as the gate swung wider and the sorcery of the drug and the dream pushed me through, I knew that all sights and glories were at an end; for in that new realm was neither land nor sea, but only the white void of unpeopled and illimitable space. So, happier than I had ever dared hope to be, I dissolved again into that native infinity of crystal oblivion from which the daemon Life had called me for one brief and desolate hour.
+---
+
+## Usage
+
+### Run manually
+
+```bash
+bash monitoring.sh
+```
+
+All terminals of currently logged-in users will receive the broadcast.
+
+### Schedule with cron (recommended)
+
+To run the script every 10 minutes as required by the Born2beRoot subject:
+
+```bash
+sudo crontab -e
+```
+
+Add the following line:
+
+```
+*/10 * * * * bash /path/to/monitoring.sh
+```
+
+The `-n` flag passed to `wall` suppresses the banner line that would otherwise prepend the message, keeping the output clean.
+
+---
+
+## Project context
+
+Born2beRoot is a system administration project at 42 School. Students set up a virtual machine running a minimal Debian or Rocky Linux installation, configure it according to a strict set of rules (partitioning with LVM, firewall, SSH hardening, password policies, etc.), and write this monitoring script to demonstrate they understand the system they have built.
+
+---
+
+## Author
+
+**akdovlet** — akdovlet@student.42.fr  
+Created: 2023-12-29
